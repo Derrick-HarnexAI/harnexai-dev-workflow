@@ -181,9 +181,11 @@ class TrafficJamWhopper:
     def __init__(self, maps_client, center, radius, order_manager):
         self.detector = TrafficJamDetector(maps_client, center, radius)
         self.order_manager = order_manager
+        self.traffic_jam_locations = []
 
     def check_for_traffic_jams(self):
         jams = self.detector.find_traffic_jams()
+        self.traffic_jam_locations = jams
         for jam_location in jams:
             self.trigger_order_availability(jam_location)
 
@@ -191,6 +193,10 @@ class TrafficJamWhopper:
         logging.info(f"Traffic Jam Whopper service is now available near {location}")
 
     def create_order(self, customer_name, location):
+        if location not in self.traffic_jam_locations:
+            logging.warning(f"Cannot create order. No traffic jam detected at {location}.")
+            print(f"Cannot create order. No traffic jam detected at {location}.")
+            return None
         return self.order_manager.create_order(customer_name, location)
 
 class TrafficJamWhopperFactory:
