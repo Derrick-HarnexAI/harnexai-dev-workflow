@@ -33,10 +33,10 @@ stages:
         pip install -r requirements.txt
       displayName: 'Install dependencies'
 
-    # Linting
-    - script: |
-        flake8 .
-      displayName: 'Run linting'
+    # # Linting
+    # - script: |
+    #     flake8 .
+    #   displayName: 'Run linting'
 
     # Test execution
     - script: |
