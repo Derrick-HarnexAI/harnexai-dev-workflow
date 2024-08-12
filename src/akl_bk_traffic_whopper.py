@@ -87,6 +87,7 @@ class TrafficJamDetector:
             logging.error(f"Error checking traffic on {route['name']}: {str(e)}")
             return False
 
+# Update the Order class
 class Order:
     def __init__(self, customer_name, location):
         self.id = random.randint(1000, 9999)
@@ -104,6 +105,11 @@ class Order:
             "status": self.status
         }
 
+    def cancel(self):
+        self.status = "Removed"
+
+
+# Update the OrderRepository class
 class OrderRepository:
     def __init__(self):
         self.data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
@@ -126,9 +132,24 @@ class OrderRepository:
         if os.path.exists(self.orders_file):
             with open(self.orders_file, 'r') as f:
                 order_dicts = json.load(f)
-                return [Order(o['customer_name'], o['location']) for o in order_dicts]
+                orders = []
+                for o in order_dicts:
+                    order = Order(o['customer_name'], o['location'])
+                    order.id = o['id']
+                    order.timestamp = datetime.fromisoformat(o['timestamp'])
+                    order.status = o['status']
+                    orders.append(order)
+                return orders
         return []
 
+    def update_order(self, order):
+        for i, existing_order in enumerate(self.orders):
+            if existing_order.id == order.id:
+                self.orders[i] = order
+                self.save_orders()
+                return
+
+# Update the OrderManager class
 class OrderManager:
     def __init__(self, repository):
         self.repository = repository
@@ -141,6 +162,20 @@ class OrderManager:
 
     def get_orders(self):
         return self.repository.get_orders()
+
+    def cancel_order(self, order_id):
+        orders = self.get_orders()
+        for order in orders:
+            if order.id == order_id:
+                if order.status == "Removed":
+                    logging.warning(f"Order {order_id} has already been cancelled.")
+                    return None
+                order.cancel()
+                self.repository.update_order(order)
+                logging.info(f"Order {order_id} has been cancelled.")
+                return order
+        logging.warning(f"Order {order_id} not found.")
+        return None
 
 class TrafficJamWhopper:
     def __init__(self, maps_client, center, radius, order_manager):
@@ -167,6 +202,7 @@ class TrafficJamWhopperFactory:
         order_manager = OrderManager(repository)
         return TrafficJamWhopper(gmaps, AUCKLAND_CENTER, radius=5000, order_manager=order_manager)
 
+# Update the main function
 def main():
     tj_whopper = TrafficJamWhopperFactory.create()
 
@@ -174,7 +210,8 @@ def main():
         print("\n1. Check for traffic jams")
         print("2. Create an order")
         print("3. View all orders")
-        print("4. Exit")
+        print("4. Cancel an order")
+        print("5. Exit")
         choice = input("Enter your choice: ")
 
         if choice == '1':
@@ -186,8 +223,11 @@ def main():
         elif choice == '3':
             orders = tj_whopper.order_manager.get_orders()
             for order in orders:
-                print(f"Order {order.id}: {order.customer_name} at {order.location}")
+                print(f"Order {order.id}: {order.customer_name} at {order.location} - Status: {order.status}")
         elif choice == '4':
+            order_id = int(input("Enter order ID to cancel: "))
+            tj_whopper.order_manager.cancel_order(order_id)
+        elif choice == '5':
             break
         else:
             print("Invalid choice. Please try again.")
