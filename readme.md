@@ -6,7 +6,7 @@ The Traffic Jam Whopper codebase implements a system that detects traffic jams a
 
 ## Architecture Diagram
 
-[![](https://app.eraser.io/workspace/bF2oB8d7tF22rNahhahM/preview)](https://app.eraser.io/workspace/bF2oB8d7tF22rNahhahM)
+[![](https://app.eraser.io/workspace/bF2oB8d7tF22rNahhahM/preview?elements=94Rkhl8HlOi-dCtu_bRtmw&type=embed)](https://app.eraser.io/workspace/bF2oB8d7tF22rNahhahM?elements=94Rkhl8HlOi-dCtu_bRtmw)
 
 ## Main Components
 
