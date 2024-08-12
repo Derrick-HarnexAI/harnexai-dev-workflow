@@ -1,3 +1,26 @@
+"""
+Traffic Jam Whopper System
+
+This module implements a simulation of Burger King's Traffic Jam Whopper feature,
+which detects traffic jams and allows for creating food orders in those areas.
+
+The system consists of several key components:
+- MockGoogleMapsClient: Simulates the Google Maps API
+- TrafficJamDetector: Detects traffic jams using the mock client
+- Order: Represents a customer order
+- OrderRepository: Handles persistence of orders
+- OrderManager: Manages order creation and retrieval
+- TrafficJamWhopper: Main class that coordinates the system
+- TrafficJamWhopperFactory: Creates instances of TrafficJamWhopper
+- CLIFormatter: Formats output for the command-line interface
+
+Usage:
+    Run the script to start the Traffic Jam Whopper System CLI:
+    $ python akl_bk_traffic_whopper.py
+
+Note: This is a simulation and does not interact with real-world systems or data.
+"""
+
 import random
 import logging
 from datetime import datetime
@@ -10,6 +33,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 class MockGoogleMapsClient:
     def __init__(self):
+        """Initializes the MockGoogleMapsClient with predefined routes."""
         self.routes = [
             {"name": "Queen Street", "geometry": {"location": (-36.8485, 174.7633)}},
             {"name": "Karangahape Road", "geometry": {"location": (-36.8573, 174.7614)}},
@@ -28,9 +52,30 @@ class MockGoogleMapsClient:
         ]
 
     def places_nearby(self, location, radius, type):
+        """Simulates the Google Maps API places_nearby method.
+
+        Args:
+            location (tuple): The latitude and longitude to search around.
+            radius (int): The radius to search within.
+            type (str): The type of place to search for.
+
+        Returns:
+            dict: A dictionary containing the search results.
+        """
         return {"results": self.routes}
 
     def directions(self, start_location, end_location, mode, departure_time):
+        """Simulates the Google Maps API directions method.
+
+        Args:
+            start_location (tuple): The starting latitude and longitude.
+            end_location (tuple): The ending latitude and longitude.
+            mode (str): The mode of transportation.
+            departure_time (datetime): The departure time.
+
+        Returns:
+            list: A list containing the directions results.
+        """
         distance = random.uniform(1000, 5000)
         duration = random.uniform(300, 1800)
         return [{
@@ -42,11 +87,23 @@ class MockGoogleMapsClient:
 
 class TrafficJamDetector:
     def __init__(self, maps_client, center, radius):
+        """Initializes the TrafficJamDetector.
+
+        Args:
+            maps_client (MockGoogleMapsClient): The mock Google Maps client.
+            center (tuple): The center location to search around.
+            radius (int): The radius to search within.
+        """
         self.maps_client = maps_client
         self.center = center
         self.radius = radius
 
     def find_traffic_jams(self):
+        """Finds traffic jams near the center location.
+
+        Returns:
+            list: A list of locations with traffic jams.
+        """
         places_result = self.maps_client.places_nearby(
             location=self.center,
             radius=self.radius,
@@ -60,6 +117,14 @@ class TrafficJamDetector:
         return jams
 
     def check_traffic_on_route(self, route):
+        """Checks for traffic on a given route.
+
+        Args:
+            route (dict): The route to check for traffic.
+
+        Returns:
+            bool: True if there is a traffic jam, False otherwise.
+        """
         try:
             start_location = route['geometry']['location']
             end_location = route['geometry']['location']
@@ -88,9 +153,14 @@ class TrafficJamDetector:
             logging.error(f"Error checking traffic on {route['name']}: {str(e)}")
             return False
 
-# Update the Order class
 class Order:
     def __init__(self, customer_name, location):
+        """Initializes an Order.
+
+        Args:
+            customer_name (str): The name of the customer.
+            location (str): The location of the order.
+        """
         self.id = random.randint(1000, 9999)
         self.customer_name = customer_name
         self.location = location
@@ -98,6 +168,11 @@ class Order:
         self.status = "Pending"
 
     def to_dict(self):
+        """Converts the Order to a dictionary.
+
+        Returns:
+            dict: A dictionary representation of the Order.
+        """
         return {
             "id": self.id,
             "customer_name": self.customer_name,
@@ -107,29 +182,45 @@ class Order:
         }
 
     def cancel(self):
+        """Cancels the Order."""
         self.status = "Removed"
 
-
-# Update the OrderRepository class
 class OrderRepository:
     def __init__(self):
+        """Initializes the OrderRepository."""
         self.data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
         self.orders_file = os.path.join(self.data_dir, 'orders.json')
         self.orders = self.load_orders()
 
     def save_order(self, order):
+        """Saves an Order to the repository.
+
+        Args:
+            order (Order): The order to save.
+        """
         self.orders.append(order)
         self.save_orders()
 
     def get_orders(self):
+        """Gets all orders from the repository.
+
+        Returns:
+            list: A list of all orders.
+        """
         return self.orders
 
     def save_orders(self):
+        """Saves all orders to the orders file."""
         os.makedirs(self.data_dir, exist_ok=True)
         with open(self.orders_file, 'w') as f:
             json.dump([order.to_dict() for order in self.orders], f)
 
     def load_orders(self):
+        """Loads orders from the orders file.
+
+        Returns:
+            list: A list of loaded orders.
+        """
         if os.path.exists(self.orders_file):
             with open(self.orders_file, 'r') as f:
                 order_dicts = json.load(f)
@@ -144,27 +235,58 @@ class OrderRepository:
         return []
 
     def update_order(self, order):
+        """Updates an existing order in the repository.
+
+        Args:
+            order (Order): The order to update.
+        """
         for i, existing_order in enumerate(self.orders):
             if existing_order.id == order.id:
                 self.orders[i] = order
                 self.save_orders()
                 return
 
-# Update the OrderManager class
 class OrderManager:
     def __init__(self, repository):
+        """Initializes the OrderManager.
+
+        Args:
+            repository (OrderRepository): The order repository.
+        """
         self.repository = repository
 
     def create_order(self, customer_name, location):
+        """Creates a new order.
+
+        Args:
+            customer_name (str): The name of the customer.
+            location (str): The location of the order.
+
+        Returns:
+            Order: The created order.
+        """
         order = Order(customer_name, location)
         self.repository.save_order(order)
         logging.info(f"New order created: {order.id} for {customer_name} at {location}")
         return order
 
     def get_orders(self):
+        """Gets all orders.
+
+        Returns:
+            list: A list of all orders.
+        """
         return self.repository.get_orders()
 
     def cancel_order(self, order_id):
+        """Cancels an order by ID.
+
+        Args:
+            order_id (int): The ID of the order to cancel.
+
+        Returns:
+            Order: The cancelled order, or None if not found.
+        """
         orders = self.get_orders()
         for order in orders:
             if order.id == order_id:
@@ -180,20 +302,43 @@ class OrderManager:
 
 class TrafficJamWhopper:
     def __init__(self, maps_client, center, radius, order_manager):
+        """Initializes the TrafficJamWhopper.
+
+        Args:
+            maps_client (MockGoogleMapsClient): The mock Google Maps client.
+            center (tuple): The center location to search around.
+            radius (int): The radius to search within.
+            order_manager (OrderManager): The order manager.
+        """
         self.detector = TrafficJamDetector(maps_client, center, radius)
         self.order_manager = order_manager
         self.traffic_jam_locations = []
 
     def check_for_traffic_jams(self):
+        """Checks for traffic jams and updates the traffic jam locations."""
         jams = self.detector.find_traffic_jams()
         self.traffic_jam_locations = jams
         for jam_location in jams:
             self.trigger_order_availability(jam_location)
 
     def trigger_order_availability(self, location):
+        """Triggers order availability for a given location.
+
+        Args:
+            location (str): The location to trigger order availability for.
+        """
         logging.info(f"Traffic Jam Whopper service is now available near {location}")
 
     def create_order(self, customer_name, location):
+        """Creates an order if there is a traffic jam at the location.
+
+        Args:
+            customer_name (str): The name of the customer.
+            location (str): The location of the order.
+
+        Returns:
+            Order: The created order, or None if no traffic jam is detected.
+        """
         if location not in self.traffic_jam_locations:
             logging.warning(f"Cannot create order. No traffic jam detected at {location}.")
             print(f"Cannot create order. No traffic jam detected at {location}.")
@@ -203,6 +348,11 @@ class TrafficJamWhopper:
 class TrafficJamWhopperFactory:
     @staticmethod
     def create():
+        """Creates a TrafficJamWhopper instance.
+
+        Returns:
+            TrafficJamWhopper: The created TrafficJamWhopper instance.
+        """
         gmaps = MockGoogleMapsClient()
         AUCKLAND_CENTER = (-36.8485, 174.7633)
         repository = OrderRepository()
@@ -235,6 +385,7 @@ class CLIFormatter:
     
 
 def main():
+    """Main function to run the Traffic Jam Whopper service."""
     tj_whopper = TrafficJamWhopperFactory.create()
 
     while True:
