@@ -78,7 +78,3 @@ stages:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: 'drop'
       displayName: 'Publish artifacts'
-
-# Error handling and reporting
-- task: PostBuildCleanup@3
-  condition: always()
