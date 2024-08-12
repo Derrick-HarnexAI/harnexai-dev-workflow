@@ -104,19 +104,15 @@ class Order:
             "status": self.status
         }
 
-class OrderManager:
+class OrderRepository:
     def __init__(self):
-        self.orders = []
         self.data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
         self.orders_file = os.path.join(self.data_dir, 'orders.json')
-        self.load_orders()
+        self.orders = self.load_orders()
 
-    def create_order(self, customer_name, location):
-        order = Order(customer_name, location)
+    def save_order(self, order):
         self.orders.append(order)
         self.save_orders()
-        logging.info(f"New order created: {order.id} for {customer_name} at {location}")
-        return order
 
     def get_orders(self):
         return self.orders
@@ -130,12 +126,26 @@ class OrderManager:
         if os.path.exists(self.orders_file):
             with open(self.orders_file, 'r') as f:
                 order_dicts = json.load(f)
-                self.orders = [Order(o['customer_name'], o['location']) for o in order_dicts]
+                return [Order(o['customer_name'], o['location']) for o in order_dicts]
+        return []
+
+class OrderManager:
+    def __init__(self, repository):
+        self.repository = repository
+
+    def create_order(self, customer_name, location):
+        order = Order(customer_name, location)
+        self.repository.save_order(order)
+        logging.info(f"New order created: {order.id} for {customer_name} at {location}")
+        return order
+
+    def get_orders(self):
+        return self.repository.get_orders()
 
 class TrafficJamWhopper:
-    def __init__(self, maps_client, center, radius):
+    def __init__(self, maps_client, center, radius, order_manager):
         self.detector = TrafficJamDetector(maps_client, center, radius)
-        self.order_manager = OrderManager()
+        self.order_manager = order_manager
 
     def check_for_traffic_jams(self):
         jams = self.detector.find_traffic_jams()
@@ -148,10 +158,17 @@ class TrafficJamWhopper:
     def create_order(self, customer_name, location):
         return self.order_manager.create_order(customer_name, location)
 
+class TrafficJamWhopperFactory:
+    @staticmethod
+    def create():
+        gmaps = MockGoogleMapsClient()
+        AUCKLAND_CENTER = (-36.8485, 174.7633)
+        repository = OrderRepository()
+        order_manager = OrderManager(repository)
+        return TrafficJamWhopper(gmaps, AUCKLAND_CENTER, radius=5000, order_manager=order_manager)
+
 def main():
-    gmaps = MockGoogleMapsClient()
-    AUCKLAND_CENTER = (-36.8485, 174.7633)
-    tj_whopper = TrafficJamWhopper(gmaps, AUCKLAND_CENTER, radius=5000)
+    tj_whopper = TrafficJamWhopperFactory.create()
 
     while True:
         print("\n1. Check for traffic jams")
