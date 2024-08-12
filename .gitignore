@@ -1,5 +1,2 @@
-# Ignore the orders.json file in the data directory
-data/orders.json
-
 # Ignore all __pycache__ directories recursively
 **/__pycache__/
