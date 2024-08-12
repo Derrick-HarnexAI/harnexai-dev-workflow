@@ -1,0 +1,84 @@
+# Azure Pipelines YAML file for Traffic Jam Whopper project
+
+# Trigger configuration
+trigger:
+  - main
+
+pr:
+  - main
+
+# Pool specification
+pool:
+  vmImage: 'ubuntu-latest'
+
+# Variables definition
+variables:
+  pythonVersion: '3.9'
+
+# Stages and jobs
+stages:
+- stage: Build
+  jobs:
+  - job: BuildAndTest
+    steps:
+    # Environment setup
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+      displayName: 'Use Python $(pythonVersion)'
+
+    # Dependency installation
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install dependencies'
+
+    # Linting
+    - script: |
+        flake8 .
+      displayName: 'Run linting'
+
+    # Test execution
+    - script: |
+        PYTHONPATH=src pytest tests --doctest-modules --junitxml=junit/test-results.xml
+      displayName: 'Run tests'
+
+    # Code coverage analysis
+    - script: |
+        PYTHONPATH=src pytest tests --doctest-modules --cov=src --cov-report=xml --cov-report=html
+      displayName: 'Run tests with coverage'
+
+    # Publish test results
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFiles: '**/test-*.xml'
+        testRunTitle: 'Publish test results'
+
+    # Publish code coverage
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+
+    # Artifact generation
+    - task: CopyFiles@2
+      inputs:
+        contents: |
+          src/**/*.py
+          tests/**/*.py
+          requirements.txt
+          README.md
+        targetFolder: '$(Build.ArtifactStagingDirectory)'
+      displayName: 'Copy project files to artifact staging directory'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: 'drop'
+      displayName: 'Publish artifacts'
+
+# Error handling and reporting
+- task: PostBuildCleanup@3
+  condition: always()

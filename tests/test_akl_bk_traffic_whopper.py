@@ -18,9 +18,6 @@ from unittest.mock import patch
 from datetime import datetime
 from abc import ABC, abstractmethod
 
-# Add the src directory to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
-
 from akl_bk_traffic_whopper import MockGoogleMapsClient, TrafficJamDetector, Order, OrderManager, TrafficJamWhopper
 
 class TestMockGoogleMapsClient(unittest.TestCase):
