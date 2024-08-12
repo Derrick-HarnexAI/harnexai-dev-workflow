@@ -107,6 +107,8 @@ class Order:
 class OrderManager:
     def __init__(self):
         self.orders = []
+        self.data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+        self.orders_file = os.path.join(self.data_dir, 'orders.json')
         self.load_orders()
 
     def create_order(self, customer_name, location):
@@ -120,12 +122,13 @@ class OrderManager:
         return self.orders
 
     def save_orders(self):
-        with open('orders.json', 'w') as f:
+        os.makedirs(self.data_dir, exist_ok=True)
+        with open(self.orders_file, 'w') as f:
             json.dump([order.to_dict() for order in self.orders], f)
 
     def load_orders(self):
-        if os.path.exists('orders.json'):
-            with open('orders.json', 'r') as f:
+        if os.path.exists(self.orders_file):
+            with open(self.orders_file, 'r') as f:
                 order_dicts = json.load(f)
                 self.orders = [Order(o['customer_name'], o['location']) for o in order_dicts]
 
