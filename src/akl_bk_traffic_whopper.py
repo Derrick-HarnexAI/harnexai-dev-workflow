@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 import json
 import os
+import textwrap
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -207,13 +208,39 @@ class TrafficJamWhopperFactory:
         repository = OrderRepository()
         order_manager = OrderManager(repository)
         return TrafficJamWhopper(gmaps, AUCKLAND_CENTER, radius=5000, order_manager=order_manager)
+    
 
-# Update the main function
+class CLIFormatter:
+    @staticmethod
+    def header(text):
+        return f"\n{'=' * 50}\n{text.center(50)}\n{'=' * 50}"
+
+    @staticmethod
+    def subheader(text):
+        return f"\n{'-' * 50}\n{text}\n{'-' * 50}"
+
+    @staticmethod
+    def table(headers, rows, column_widths):
+        result = []
+        header_row = " | ".join(h.ljust(w) for h, w in zip(headers, column_widths))
+        result.append(header_row)
+        result.append("-" * len(header_row))
+        for row in rows:
+            result.append(" | ".join(str(item).ljust(w) for item, w in zip(row, column_widths)))
+        return "\n".join(result)
+
+    @staticmethod
+    def wrapped_text(text, width=50):
+        return "\n".join(textwrap.wrap(text, width=width))
+    
+
 def main():
     tj_whopper = TrafficJamWhopperFactory.create()
 
     while True:
-        print("\n1. Check for traffic jams")
+        print(CLIFormatter.header("Traffic Jam Whopper System"))
+        print(CLIFormatter.subheader("Menu"))
+        print("1. Check for traffic jams")
         print("2. Create an order")
         print("3. View all orders")
         print("4. Cancel an order")
@@ -222,21 +249,51 @@ def main():
 
         if choice == '1':
             tj_whopper.check_for_traffic_jams()
+            print(CLIFormatter.subheader("Traffic Jam Detection Results"))
+            if tj_whopper.traffic_jam_locations:
+                headers = ["Location"]
+                rows = [[loc] for loc in tj_whopper.traffic_jam_locations]
+                print(CLIFormatter.table(headers, rows, [50]))
+            else:
+                print("No traffic jams detected at this time.")
+
         elif choice == '2':
             customer_name = input("Enter customer name: ")
             location = input("Enter location: ")
-            tj_whopper.create_order(customer_name, location)
+            order = tj_whopper.create_order(customer_name, location)
+            if order:
+                print(CLIFormatter.subheader("Order Created Successfully"))
+                print(CLIFormatter.wrapped_text(f"Order ID: {order.id}"))
+                print(CLIFormatter.wrapped_text(f"Customer: {order.customer_name}"))
+                print(CLIFormatter.wrapped_text(f"Location: {order.location}"))
+                print(CLIFormatter.wrapped_text(f"Status: {order.status}"))
+
         elif choice == '3':
             orders = tj_whopper.order_manager.get_orders()
-            for order in orders:
-                print(f"Order {order.id}: {order.customer_name} at {order.location} - Status: {order.status}")
+            print(CLIFormatter.subheader("All Orders"))
+            if orders:
+                headers = ["ID", "Customer", "Location", "Status"]
+                rows = [[order.id, order.customer_name, order.location, order.status] for order in orders]
+                print(CLIFormatter.table(headers, rows, [6, 20, 30, 10]))
+            else:
+                print("No orders found.")
+
         elif choice == '4':
             order_id = int(input("Enter order ID to cancel: "))
-            tj_whopper.order_manager.cancel_order(order_id)
+            cancelled_order = tj_whopper.order_manager.cancel_order(order_id)
+            if cancelled_order:
+                print(CLIFormatter.subheader("Order Cancelled"))
+                print(CLIFormatter.wrapped_text(f"Order ID {cancelled_order.id} has been cancelled."))
+            else:
+                print(CLIFormatter.wrapped_text("Failed to cancel order. Please check the order ID and try again."))
+
         elif choice == '5':
+            print(CLIFormatter.wrapped_text("Thank you for using the Traffic Jam Whopper System. Goodbye!"))
             break
         else:
-            print("Invalid choice. Please try again.")
+            print(CLIFormatter.wrapped_text("Invalid choice. Please try again."))
+
+        input("\nPress Enter to continue...")
 
 if __name__ == "__main__":
     main()
