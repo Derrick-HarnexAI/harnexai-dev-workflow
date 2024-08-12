@@ -4,6 +4,10 @@
 
 The Traffic Jam Whopper codebase implements a system that detects traffic jams and allows for creating food orders in those areas. This project simulates the functionality of Burger King's Traffic Jam Whopper feature, providing a foundation for further development and testing.
 
+## Architecture Diagram
+
+[![](https://app.eraser.io/workspace/bF2oB8d7tF22rNahhahM/preview)](https://app.eraser.io/workspace/bF2oB8d7tF22rNahhahM)
+
 ## Main Components
 
 ### 1. MockGoogleMapsClient
