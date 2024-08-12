@@ -37,19 +37,3 @@ The Traffic Jam Whopper codebase implements a system that detects traffic jams a
 
 - Provides a simple command-line interface for interacting with the system.
 - Allows users to check for traffic jams, create orders, and view existing orders.
-
-## Getting Started
-
-(Add instructions for setting up and running the project here)
-
-## Usage
-
-(Add instructions on how to use the command-line interface and interact with the system)
-
-## Contributing
-
-(Add guidelines for contributing to the project)
-
-## License
-
-(Add license information)
