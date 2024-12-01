@@ -27,9 +27,16 @@ from datetime import datetime
 import json
 import os
 import textwrap
+import time
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.style import Style
+from rich import print as rprint
 
-# Set up logging
+# Set up logging and rich console
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+console = Console()
 
 class MockGoogleMapsClient:
     def __init__(self):
@@ -363,21 +370,33 @@ class TrafficJamWhopperFactory:
 class CLIFormatter:
     @staticmethod
     def header(text):
-        return f"\n{'=' * 50}\n{text.center(50)}\n{'=' * 50}"
+        return Panel(text, style="bold blue", expand=False)
 
     @staticmethod
     def subheader(text):
-        return f"\n{'-' * 50}\n{text}\n{'-' * 50}"
+        return Panel(text, style="cyan", expand=False)
+
+    @staticmethod
+    def success(text):
+        return Panel(text, style="bold green", expand=False)
+
+    @staticmethod
+    def warning(text):
+        return Panel(text, style="bold yellow", expand=False)
+
+    @staticmethod
+    def error(text):
+        return Panel(text, style="bold red", expand=False)
 
     @staticmethod
     def table(headers, rows, column_widths):
-        result = []
-        header_row = " | ".join(h.ljust(w) for h, w in zip(headers, column_widths))
-        result.append(header_row)
-        result.append("-" * len(header_row))
+        from rich.table import Table
+        table = Table(show_header=True, header_style="bold magenta")
+        for header, width in zip(headers, column_widths):
+            table.add_column(header, width=width)
         for row in rows:
-            result.append(" | ".join(str(item).ljust(w) for item, w in zip(row, column_widths)))
-        return "\n".join(result)
+            table.add_row(*[str(item) for item in row])
+        return table
 
     @staticmethod
     def wrapped_text(text, width=50):
@@ -389,60 +408,107 @@ def main():
     tj_whopper = TrafficJamWhopperFactory.create()
 
     while True:
-        print(CLIFormatter.header("Traffic Jam Whopper System"))
-        print(CLIFormatter.subheader("Menu"))
-        print("1. Check for traffic jams")
-        print("2. Create an order")
-        print("3. View all orders")
-        print("4. Cancel an order")
-        print("5. Exit")
-        choice = input("Enter your choice: ")
+        console.clear()
+        console.print(CLIFormatter.header("Traffic Jam Whopper System"))
+        console.print(CLIFormatter.subheader("Menu"))
+        menu_items = [
+            "[cyan]1.[/cyan] Check for traffic jams",
+            "[cyan]2.[/cyan] Create an order",
+            "[cyan]3.[/cyan] View all orders",
+            "[cyan]4.[/cyan] Cancel an order",
+            "[cyan]5.[/cyan] Exit"
+        ]
+        for item in menu_items:
+            console.print(item)
+        
+        choice = input("\nEnter your choice: ")
 
         if choice == '1':
-            tj_whopper.check_for_traffic_jams()
-            print(CLIFormatter.subheader("Traffic Jam Detection Results"))
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("[cyan]Checking for traffic jams...", total=None)
+                tj_whopper.check_for_traffic_jams()
+                progress.update(task, completed=True)
+            
+            console.print(CLIFormatter.subheader("Traffic Jam Detection Results"))
             if tj_whopper.traffic_jam_locations:
                 headers = ["Location"]
                 rows = [[loc] for loc in tj_whopper.traffic_jam_locations]
-                print(CLIFormatter.table(headers, rows, [50]))
+                console.print(CLIFormatter.table(headers, rows, [50]))
             else:
-                print("No traffic jams detected at this time.")
+                console.print(CLIFormatter.warning("No traffic jams detected at this time."))
 
         elif choice == '2':
             customer_name = input("Enter customer name: ")
             location = input("Enter location: ")
-            order = tj_whopper.create_order(customer_name, location)
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("[cyan]Creating order...", total=None)
+                order = tj_whopper.create_order(customer_name, location)
+                progress.update(task, completed=True)
+            
             if order:
-                print(CLIFormatter.subheader("Order Created Successfully"))
-                print(CLIFormatter.wrapped_text(f"Order ID: {order.id}"))
-                print(CLIFormatter.wrapped_text(f"Customer: {order.customer_name}"))
-                print(CLIFormatter.wrapped_text(f"Location: {order.location}"))
-                print(CLIFormatter.wrapped_text(f"Status: {order.status}"))
+                console.print(CLIFormatter.success("Order Created Successfully"))
+                order_details = [
+                    f"Order ID: {order.id}",
+                    f"Customer: {order.customer_name}",
+                    f"Location: {order.location}",
+                    f"Status: {order.status}"
+                ]
+                for detail in order_details:
+                    console.print(f"[green]{detail}[/green]")
+            else:
+                console.print(CLIFormatter.error("Failed to create order"))
 
         elif choice == '3':
-            orders = tj_whopper.order_manager.get_orders()
-            print(CLIFormatter.subheader("All Orders"))
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("[cyan]Fetching orders...", total=None)
+                orders = tj_whopper.order_manager.get_orders()
+                progress.update(task, completed=True)
+            
+            console.print(CLIFormatter.subheader("All Orders"))
             if orders:
                 headers = ["ID", "Customer", "Location", "Status"]
                 rows = [[order.id, order.customer_name, order.location, order.status] for order in orders]
-                print(CLIFormatter.table(headers, rows, [6, 20, 30, 10]))
+                console.print(CLIFormatter.table(headers, rows, [6, 20, 30, 10]))
             else:
-                print("No orders found.")
+                console.print(CLIFormatter.warning("No orders found."))
 
         elif choice == '4':
-            order_id = int(input("Enter order ID to cancel: "))
-            cancelled_order = tj_whopper.order_manager.cancel_order(order_id)
-            if cancelled_order:
-                print(CLIFormatter.subheader("Order Cancelled"))
-                print(CLIFormatter.wrapped_text(f"Order ID {cancelled_order.id} has been cancelled."))
-            else:
-                print(CLIFormatter.wrapped_text("Failed to cancel order. Please check the order ID and try again."))
+            try:
+                order_id = int(input("Enter order ID to cancel: "))
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    console=console,
+                ) as progress:
+                    task = progress.add_task("[cyan]Cancelling order...", total=None)
+                    cancelled_order = tj_whopper.order_manager.cancel_order(order_id)
+                    progress.update(task, completed=True)
+                
+                if cancelled_order:
+                    console.print(CLIFormatter.success(f"Order ID {cancelled_order.id} has been cancelled."))
+                else:
+                    console.print(CLIFormatter.error("Failed to cancel order. Please check the order ID and try again."))
+            except ValueError:
+                console.print(CLIFormatter.error("Invalid order ID. Please enter a number."))
 
         elif choice == '5':
-            print(CLIFormatter.wrapped_text("Thank you for using the Traffic Jam Whopper System. Goodbye!"))
+            console.print(CLIFormatter.success("Thank you for using the Traffic Jam Whopper System. Goodbye!"))
             break
         else:
-            print(CLIFormatter.wrapped_text("Invalid choice. Please try again."))
+            console.print(CLIFormatter.error("Invalid choice. Please try again."))
 
         input("\nPress Enter to continue...")
 
